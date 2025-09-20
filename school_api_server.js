@@ -1025,4 +1025,49 @@ app.post('/admin_update_school', function (req, res) {
     });
 });
 
+//LAST LINE
+
+app.post('/grades_list', function (req, res) {
+    var userdata = req.body;
+    School.grades_list(userdata, pool, function (http_status_code, err, response) {
+        if (err) {
+			console.log(err);
+            throw err;
+        }
+        if (config.DEBUG == 2)
+            console.log(response);
+            res.status(http_status_code).send(response);
+    });
+});
+
+
+app.post('/courses_by_grade', function (req, res) {
+    var userdata = req.body;
+    School.courses_by_grade(userdata, pool, function (http_status_code, err, response) {
+        if (err) {
+			console.log(err);
+            throw err;
+        }
+        if (config.DEBUG == 2)
+            console.log(response);
+            res.status(http_status_code).send(response);
+    });
+});
+
+
+app.post('/robotics_courses_list', function (req, res) {
+    var userdata = req.body;
+    School.robotics_courses_list(userdata, pool, function (http_status_code, err, response) {
+		
+        if (err) {
+			console.log(err);
+            throw err;
+        }
+        if (config.DEBUG == 2)
+            console.log(response);
+        res.status(http_status_code).send(response);
+    });
+});
+
+
 module.exports = app;

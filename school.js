@@ -112,7 +112,7 @@ module.exports.doubts_list = doubts_list;
 module.exports.doubts_details = doubts_details;
 module.exports.send_doubt_message = send_doubt_message;
 module.exports.reviews_list = reviews_list;
-
+module.exports.robotics_courses_list = robotics_courses_list;
 
 // variables global
 var secretSalt = config.secretSalt;
@@ -5608,4 +5608,288 @@ function update_user(userdata, pool, callback) {
 			}
 		});
 	});
+}
+
+
+
+/* grades list */
+function grades_list(userdata, pool, callback) {
+	var resultJson = '';
+
+	var keyword = '';
+	if (typeof userdata.keyword != 'undefined' && userdata.keyword != '') {
+		keyword = userdata.keyword;
+	}
+
+	pool.getConnection(function (err, connection) {
+		if (keyword != '') {
+			Keyconditoin = ' AND grades.grade_name LIKE  "%' + keyword + '%"';
+		}
+		detailsquery = 'SELECT grades.* from grades where grades.status !="2"';
+		console.log('detailsquery', detailsquery);
+		connection.query(detailsquery, function (errSelDetails, resSelDetails) {
+			if (errSelDetails) {
+				resultJson = '{"replyCode":"error","replyMsg":"' + errSelDetails.message + '","cmd":"grades"}\n';
+				connection.release();
+				callback(200, null, resultJson);
+				return;
+			} else {
+				resultJson =
+					'{"replyCode":"success","replyMsg":"Details found successfully .","data":' +
+					JSON.stringify(resSelDetails) +
+					',"cmd":"grades"}\n';
+				console.log('res-suceess');
+				connection.release();
+				callback(200, null, resultJson);
+				return;
+			}
+		});
+	});
+}
+
+
+/* courses by grade list */
+function courses_by_grade(userdata, pool, callback) {
+	var resultJson = '';
+	var resPro=[];
+	var class_name = '';
+	var class_type = '1';
+	if (typeof userdata.class_name != 'undefined' && userdata.class_name != '') {
+		class_name = userdata.class_name;
+	}
+	if (typeof userdata.class_type != 'undefined' && userdata.class_type != '') {
+		class_type = userdata.class_type;
+	}
+
+	pool.getConnection(function (err, connection) {
+		
+		var i = 0;
+		async.eachSeries(class_name,function(rec2, loop2){
+			var clss = rec2;
+			detailsquery = 'SELECT class_duration_template.id as template_id,courses.id as course_id,course_lesson_detail_count.class_count,course_lesson_detail_count.project_count,course_lesson_detail_count.quiz_count,courses.* from class_duration_template LEFT JOIN courses as courses on courses.id=class_duration_template.course_id LEFT JOIN course_lesson_detail_count as course_lesson_detail_count on course_lesson_detail_count.id=class_duration_template.course_id where class_duration_template.class_name ="'+clss+'" AND class_duration_template.ctype ="'+class_type+'"';
+			console.log('detailsquery',detailsquery);
+			connection.query(detailsquery, function(errSelpiMG,respROiMG){
+				if(errSelpiMG){
+					console.log('errSelpiMG',errSelpiMG);
+					loop2();
+				}else{
+					console.log('respROiMG',respROiMG)
+					resPro=resPro.concat(respROiMG);
+					loop2();
+				}
+				i=i+1;
+			});
+		},function(errSelPro){
+			if(errSelPro){
+				console.log('errSelPro',errSelPro);
+				resultJson = '{"replyCode":"error","replyMsg":"'+errSelPro.message+'","cmd":"courses_by_grade"}\n';
+				connection.release();
+				callback(200, null, resultJson);
+				return;
+			}else{
+				console.log('resPro',resPro);
+				const ids = resPro.map(o => o.id)
+				const filtered = resPro.filter(({id}, index) => !ids.includes(id, index + 1))
+
+				console.log(filtered)
+				resultJson = '{"replyCode":"success","replyMsg":"Details found successfully .","data":'+JSON.stringify(filtered)+',"cmd":"courses_by_grade"}\n';
+				console.log('res-suceess');
+				connection.release();
+				callback(200, null, resultJson);
+				return;
+			}
+		});
+	
+	});
+}
+
+
+function robotics_courses_list(userdata, pool, callback) {
+    var resultJson = '';
+    var res = '';
+    var keyword = '';
+    var age_group_id = '';
+    var robotics_type = '1';
+    var Keyconditoin = '';
+    var featured = '0';
+    var learning = "0";
+    var course_type = "3";
+
+    if (typeof userdata.learning != 'undefined' && userdata.learning != '') {
+        learning = userdata.learning;
+    }
+    if (typeof userdata.keyword != 'undefined' && userdata.keyword != '') {
+        keyword = userdata.keyword;
+    }
+    if (typeof userdata.age_group_id != 'undefined' && userdata.age_group_id != '') {
+        age_group_id = userdata.age_group_id;
+    }
+    if (typeof userdata.featured != 'undefined' && userdata.featured != '') {
+        featured = userdata.featured;
+    }
+    if (typeof userdata.robotics_type != 'undefined' && userdata.robotics_type != '') {
+        robotics_type = userdata.robotics_type;
+    }
+    if (typeof userdata.course_type != 'undefined' && userdata.course_type != '') {
+        course_type = userdata.course_type;
+    }
+
+    pool.getConnection(function(err, connection) {
+        if (keyword != '') {
+            Keyconditoin += ' AND courses.course_name LIKE  "%' + keyword + '%"';
+        }
+        if (age_group_id != '') {
+            Keyconditoin += ' AND courses.age_group_id ="' + age_group_id + '"';
+        }
+        
+        if (robotics_type != '') {
+            Keyconditoin += ' AND courses.robotics_type ="' + robotics_type + '"';
+        }
+        if (course_type != '') {
+            Keyconditoin += ' AND courses.course_type ="' + course_type + '"';
+        }
+
+        // if(featured !=''){
+        // 	Keyconditoin +=' AND courses.featured ="1"';
+        // }
+
+        // if(learning !=''){
+        // 	Keyconditoin +=' AND courses.learning = "'+learning+'"';
+        // }
+
+        Catquery = 'SELECT courses.*,rec_courses.course_name as rec_course_name,age_group.title as age_group_title from courses as courses LEFT JOIN age_group as age_group ON age_group.id = courses.age_group_id LEFT JOIN courses as rec_courses ON rec_courses.id = courses.recommended_course_id where courses.status ="1"' + Keyconditoin + ' ORDER BY courses.priority ASC';
+
+        console.log('qq', Catquery);
+        connection.query(Catquery, function(errinsert, resPro) {
+            if (!errinsert) {
+                if (resPro.length > 0) {
+                    var i = 0;
+                    async.eachSeries(resPro, function(rec2, loop2) {
+                        var course_id = rec2.id;
+                        var rec_course_id = rec2.recommended_course_id;
+                        console.log('course_id', course_id);
+                        proiMGquery = 'SELECT course_chapters.* from course_chapters where course_chapters.course_id="' + course_id + '" AND course_chapters.status="1"';
+                        console.log('proiMGquery', proiMGquery);
+                        connection.query(proiMGquery, function(errSelpiMG, respROiMG) {
+                            if (errSelpiMG) {
+                                console.log('errSelpiMG', errSelpiMG);
+
+                                loop2();
+                            } else {
+                                userquery = 'SELECT course_info.* from course_info where course_info.course_id="' + course_id + '" AND course_info.status="1"';
+                                console.log('userquery', userquery);
+                                connection.query(userquery, function(errSel, resSel) {
+                                    if (errSel) {
+                                        resultJson = '{"replyCode":"error","replyMsg":"' + errSel.message + '","cmd":"self_page_courses_details"}\n';
+                                        console.log('res-suceess');
+                                        connection.release();
+                                        callback(200, null, resultJson);
+                                        return;
+                                    } else {
+
+                                        faqQuery = 'SELECT course_faq.* from course_faq where course_faq.course_id="' + course_id + '" AND course_faq.status="1"';
+                                        console.log('faqQuery', faqQuery);
+                                        connection.query(faqQuery, function(errSelFaq, resSelFaq) {
+                                            if (errSelFaq) {
+                                                resultJson = '{"replyCode":"error","replyMsg":"' + errSelFaq.message + '","cmd":"self_page_courses_details"}\n';
+                                                console.log('res-suceess');
+                                                connection.release();
+                                                callback(200, null, resultJson);
+                                                return;
+                                            } else {
+                                                RecQuery = 'SELECT courses.* from courses where courses.id="' + rec_course_id + '" ';
+                                                console.log('RecQuery', RecQuery);
+                                                connection.query(RecQuery, function(errSelRec, resSelRec) {
+                                                    if (errSelRec) {
+                                                        resultJson = '{"replyCode":"error","replyMsg":"' + errSelRec.message + '","cmd":"self_page_courses_details"}\n';
+                                                        console.log('res-suceess');
+                                                        connection.release();
+                                                        callback(200, null, resultJson);
+                                                        return;
+                                                    } else {
+                                                        AchQuery = 'SELECT course_achievement.* from course_achievement where course_achievement.course_id="' + course_id + '" ';
+                                                        console.log('AchQuery', AchQuery);
+                                                        connection.query(AchQuery, function(errSelAch, resSelAch) {
+                                                            if (errSelAch) {
+                                                                resultJson = '{"replyCode":"error","replyMsg":"' + errSelAch.message + '","cmd":"self_page_courses_details"}\n';
+                                                                console.log('res-suceess');
+                                                                connection.release();
+                                                                callback(200, null, resultJson);
+                                                                return;
+                                                            } else {
+                                                                if (resSelFaq.length > 0) {
+                                                                    resPro[i].faq = resSelFaq;
+                                                                } else {
+                                                                    resPro[i].faq = [];
+                                                                }
+                                                                if (resSel.length > 0) {
+                                                                    resPro[i].info = resSel;
+                                                                } else {
+                                                                    resPro[i].info = [];
+                                                                }
+
+                                                                if (resSelAch.length > 0) {
+                                                                    resPro[i].achievement = resSelAch;
+                                                                } else {
+                                                                    resPro[i].achievement = [];
+                                                                }
+
+                                                                if (resSelRec.length > 0) {
+                                                                    resPro[i].recommended_course = resSelRec[0];
+                                                                } else {
+                                                                    resPro[i].recommended_course = [];
+                                                                }
+                                                                if (respROiMG.length > 0) {
+                                                                    resPro[i].chapters = respROiMG[0];
+                                                                } else {
+                                                                    resPro[i].chapters = [];
+                                                                }
+                                                                i = i + 1;
+                                                                loop2();
+                                                            }
+
+                                                        });
+                                                    }
+
+                                                });
+                                            }
+
+                                        });
+                                    }
+
+                                });
+                            }
+
+                        });
+
+                    }, function(errSelPro) {
+                        if (errSelPro) {
+                            console.log('errSelPro', errSelPro)
+                            resultJson = '{"replyCode":"error","replyMsg":"' + errSelPro.message + '","cmd":"view_classes_info"}\n';
+                            connection.release();
+                            callback(200, null, resultJson);
+                            return;
+                        } else {
+                            resultJson = '{"replyCode":"success","replyMsg":"Details found successfully .","data":' + JSON.stringify(resPro) + ',"cmd":"view_classes_info"}\n';
+                            console.log('res-suceess');
+                            connection.release();
+                            callback(200, null, resultJson);
+                            return;
+                        }
+                    });
+                } else {
+                    resultJson = '{"replyCode":"success","replyMsg":"No Record found.","data":[], "cmd":"view_classes_info"}\n';
+                    console.log('res-suceess');
+                    connection.release();
+                    callback(200, null, resultJson);
+                    return;
+                }
+            } else {
+                resultJson = '{"replyCode":"error","replyMsg":"' + errinsert.message + '","cmd":"view_classes_info"}\n';
+                connection.release();
+                callback(200, null, resultJson);
+                return;
+            }
+        });
+    });
 }
