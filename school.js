@@ -114,6 +114,11 @@ module.exports.send_doubt_message = send_doubt_message;
 module.exports.reviews_list = reviews_list;
 module.exports.robotics_courses_list = robotics_courses_list;
 
+module.exports.register_user_fun = register_user_fun;
+
+module.exports.checkValidateStudent= checkValidateStudent;
+
+module.exports.subscribe_course = subscribe_course;
 // variables global
 var secretSalt = config.secretSalt;
 
@@ -5892,4 +5897,262 @@ function robotics_courses_list(userdata, pool, callback) {
             }
         });
     });
+}
+
+
+function validateEmail(email) {
+	const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+	return re.test(email);
+}
+
+
+function checkValidateStudent(userdata, pool, callback) {
+	var resultJson = '';
+	var Hashids = require('hashids');
+
+	var email = '';
+	var mobile = '';
+	var id = '';
+	if (typeof userdata.email != 'undefined' && userdata.email != '') {
+		email = userdata.email;
+	}
+
+	if (typeof userdata.mobile != 'undefined' && userdata.mobile != '') {
+		mobile = userdata.mobile;
+	}
+
+	if (typeof userdata.id != 'undefined' && userdata.id != '') {
+		id = userdata.id;
+	}
+	pool.getConnection(function (err, connection) {
+		if (email != '') {
+			Query = 'SELECT * FROM users WHERE email="' + email + '"';
+
+		} else {
+			Query = 'SELECT * FROM users WHERE id="' + id + '"';
+
+		}
+		console.log('s', Query);
+		connection.query(Query, function (err, usersEmail) {
+			if (err) {
+				console.log(err.message);
+				connection.release();
+				callback(false, usersEmail);
+			} else {
+				if (usersEmail.length > 0) {
+					connection.release();
+					callback(true, usersEmail);
+				} else {
+					connection.release();
+					callback(false, usersEmail);
+				}
+
+			}
+		});
+	});
+}
+
+function register_user_fun(userdata, pool, callback) {
+	var resultJson = '';
+	var strJson = '';
+	var sha1 = require('sha1');
+	var Hashids = require('hashids'),
+		hashids = new Hashids(secretSalt);
+
+	var name = '';
+	var email = '';
+	var phone = '';
+	var dob = '0000-00-00';
+	var parents_name = '';
+	var mother_name = '';
+	var school_name = '';
+	var father_name = '';
+	var school_code = '';
+	var class_name = '';
+	var age_group_id = '';
+	var gender = '';
+
+
+	var password = '123456';
+	if (typeof userdata.email != 'undefined' && userdata.email != '') {
+		email = userdata.email;
+	}
+
+	if (typeof userdata.name != 'undefined' && userdata.name != '') {
+		name = userdata.name;
+	}
+
+	if (typeof userdata.mobile != 'undefined' && userdata.mobile != '') {
+		phone = userdata.mobile;
+	}
+	if (typeof userdata.phone != 'undefined' && userdata.phone != '') {
+		phone = userdata.phone;
+	}
+
+	if (typeof userdata.dob != 'undefined' && userdata.dob != '') {
+		dob = userdata.dob;
+	}
+
+	if (typeof userdata.parent != 'undefined' && userdata.parent != '') {
+		parents_name = userdata.parent;
+	}
+	if (typeof userdata.school != 'undefined' && userdata.school != '') {
+		school_name = userdata.school;
+	}
+	if (typeof userdata.father_name != 'undefined' && userdata.father_name != '') {
+		father_name = userdata.father_name;
+	}
+	if (typeof userdata.mother_name != 'undefined' && userdata.mother_name != '') {
+		mother_name = userdata.mother_name;
+	}
+	if (typeof userdata.class_name != 'undefined' && userdata.class_name != '') {
+		class_name = userdata.class_name;
+	}
+	if (typeof userdata.age_group_id != 'undefined' && userdata.age_group_id != '') {
+		age_group_id = userdata.age_group_id;
+	}
+	if (typeof userdata.gender != 'undefined' && userdata.gender != '') {
+		gender = userdata.gender;
+	}
+	if (typeof userdata.school_code != 'undefined' && userdata.school_code != '') {
+		school_code = userdata.school_code;
+	}
+
+	/* ESTABLISH CONNECTION TO DATABASE */
+	pool.getConnection(function (err, connection) {
+		var hash_password = sha1(secretSalt + password);
+		if (validateEmail(email)) {
+			console.log(email + " is valid :)");
+			checkValidateStudent(userdata, pool, function (responseEmail,dataU) {
+				console.log('dataU',dataU);
+				if (responseEmail == true) {
+					resultJson = '{"replyCode":"error","replyMsg":"user already reg","cmd":"sign_up"}\n';
+					console.log('res-suceess',dataU);
+					connection.release();
+					callback(true, dataU[0].id);
+					return;
+				} else {
+					var queryinsert = 'INSERT INTO users SET email="' + email + '",name = "' + name + '", password = "' + hash_password + '",phone = "' + phone + '",role_id="2",dob="' + dob + '",parents_name="' + parents_name + '",school_name="' + school_name + '",father_name="' + father_name + '",mother_name="' + mother_name + '",class_name="' + class_name + '",age_group_id="' + age_group_id + '",gender="' + gender + '",school_code="' + school_code + '",status="1",verified="1",created= NOW()';
+
+					console.log(queryinsert);
+					connection.query(queryinsert, function (errinsert, resultinsert) {
+						if (!errinsert) {
+							var user_id = resultinsert.insertId;
+							connection.release();
+							callback(true, user_id);
+							return;
+						} else {
+							resultJson = '{"replyCode":"error","replyMsg":"' + errinsert.message + '","cmd":"sign_up"}\n';
+							console.log('res-suceess');
+							connection.release();
+							callback(false, resultJson);
+							return;
+						}
+					})
+
+				}
+			})
+
+		} else {
+			console.log(email + " is not valid :(");
+
+			resultJson = '{"replyCode":"error","replyMsg":"Email is not valid","cmd":"sign_up"}\n';
+			console.log('res-suceess');
+			connection.release();
+			callback(false, resultJson);
+			return;
+		}
+
+	});
+}
+
+
+// subscribe_course
+
+function subscribe_course(userdata, pool, callback) {
+	var resultJson = '';
+	var course_id = '';
+	var student_id = '';
+	var teacher_id = '';
+	var price = '0';
+	var created_by = '1';
+	var start_date = '';
+	var transaction_id = '0';
+	var school_code = '';
+	var id = '';
+	var ToDate = new Date();
+	//var tday = weekday[ToDate.getDay()];
+	var Curdate =ToDate.getFullYear()+"-"+ parseInt(ToDate.getMonth()+1)+"-"+ ToDate.getDate();
+	if (typeof userdata.id != 'undefined' && userdata.id != '') {
+		id = userdata.id;
+	}
+	if (typeof userdata.course_id != 'undefined' && userdata.course_id != '') {
+		course_id = userdata.course_id;
+	}
+
+	if (typeof userdata.student_id != 'undefined' && userdata.student_id != '') {
+		student_id = userdata.student_id;
+	}
+	if (typeof userdata.teacher_id != 'undefined' && userdata.teacher_id != '') {
+		teacher_id = userdata.teacher_id;
+	}
+	if (typeof userdata.created_by != 'undefined' && userdata.created_by != '') {
+		created_by = userdata.created_by;
+	}
+	if (typeof userdata.price != 'undefined' && userdata.price != '') {
+		price = userdata.price;
+	}
+
+	if (typeof userdata.start_date != 'undefined' && userdata.start_date != '') {
+		start_date = userdata.start_date;
+	}else{
+		
+		start_date =Curdate;
+	}
+	if (typeof userdata.transaction_id != 'undefined' && userdata.transaction_id != '') {
+		transaction_id = userdata.transaction_id;
+	}
+	if (typeof userdata.school_code != 'undefined' && userdata.school_code != '') {
+		school_code = userdata.school_code;
+	}
+
+	console.log('userdata-subscribe', userdata);
+	console.log('userdata-subscribe----123');
+	pool.getConnection(function (err, connection) {
+		var querySelect = 'SELECT student_course_subscription.* from student_course_subscription WHERE course_id="' + course_id + '" AND student_id="' + student_id + '" AND status="1"';
+		console.log('querySelect--1', querySelect);
+		connection.query(querySelect, function (errSel, resSel) {
+			console.log('querySelect--1::::resSel', resSel);
+			if (errSel) {
+				resultJson = '{"replyCode":"error","replyMsg":"' + errSel.message + '","cmd":"subscribe_course"}\n';
+				connection.release();
+				callback(false, resultJson);
+				return;
+			} else {
+				if (resSel.length > 0) {
+					resultJson = '{"replyCode":"error","replyMsg":"Already subscribed","cmd":"subscribe_course"}\n';
+					connection.release();
+					callback(false, resultJson);
+					return;
+				} else {
+					var queryinsert = 'INSERT INTO student_course_subscription SET course_id="' + course_id + '",student_id="' + student_id + '",teacher_id="' + teacher_id + '",price="' + price + '",created_by="' + created_by + '",course_start_date="' + start_date + '",transaction_id="' + transaction_id + '",created="' + Curdate + '"';
+					console.log('queryinsert--1', queryinsert);
+					connection.query(queryinsert, function (err, resultIns) {
+						if (err) {
+							resultJson = '{"replyCode":"error","replyMsg":"' + err.message + '","cmd":"subscribe_course"}\n';
+							connection.release();
+							callback(false, resultJson);
+							return;
+						} else {
+							console.log('resultIns', resultIns);
+							connection.release();
+							callback(true, resultIns);
+						}
+					});
+				}
+
+			}
+		})
+
+	});
 }
