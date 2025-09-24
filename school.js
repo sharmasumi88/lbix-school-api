@@ -119,6 +119,7 @@ module.exports.register_user_fun = register_user_fun;
 module.exports.checkValidateStudent= checkValidateStudent;
 
 module.exports.subscribe_course = subscribe_course;
+module.exports.checkValidateEmailEmpProfile = checkValidateEmailEmpProfile;
 // variables global
 var secretSalt = config.secretSalt;
 
@@ -5610,6 +5611,40 @@ function update_user(userdata, pool, callback) {
 				console.log('res-suceess');
 				connection.release();
 				callback(200, null, resultJson);
+			}
+		});
+	});
+}
+
+
+function checkValidateEmailEmpProfile(userdata, pool, callback) {
+	var resultJson = '';
+	var Hashids = require('hashids');
+
+	var email = '';
+	var id = '';
+	if (typeof userdata.email != 'undefined' && userdata.email != '') {
+		email = userdata.email;
+	}
+	if (typeof userdata.id != 'undefined' && userdata.id != '') {
+		id = userdata.id;
+	}
+	pool.getConnection(function (err, connection) {
+		Query = 'SELECT * FROM users WHERE email="' + email + '" AND email !=" " AND id != "' + id + '" ';
+		console.log('s', Query);
+		connection.query(Query, function (err, usersEmail) {
+			if (err) {
+				resultJson =
+					'{"replyCode":"error","replyMsg":"' + err.message + '","cmd":"checkValidateEmailEmpProfile"}\n';
+				connection.release();
+				callback(200, null, resultJson);
+				return;
+			} else {
+				if (usersEmail.length > 0) {
+					callback(true);
+				} else {
+					callback(false);
+				}
 			}
 		});
 	});
